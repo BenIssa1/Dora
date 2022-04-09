@@ -3,16 +3,16 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import classRoomRouter from "./routers/classRoomRouter";
-import matterRouter from "./routers/matterRouter";
-import establishmentRouter from "./routers/establishmentRouter";
-import userRouter from "./routers/userRouter";
-import roleRouter from "./routers/roleRouter";
-import studentRouter from "./routers/studentRouter";
-import noteRouter from "./routers/notetRouter";
-import trimesterRouter from "./routers/trimesterRouter";
-import attendanceRouter from "./routers/attendanceRouter";
-import teacherRouter from "./routers/teacherRouter";
+import classRoomRouter from "./backend/routers/classRoomRouter";
+import matterRouter from "./backend/routers/matterRouter";
+import establishmentRouter from "./backend/routers/establishmentRouter";
+import userRouter from "./backend/routers/userRouter";
+import roleRouter from "./backend/routers/roleRouter";
+import studentRouter from "./backend/routers/studentRouter";
+import noteRouter from "./backend/routers/notetRouter";
+import trimesterRouter from "./backend/routers/trimesterRouter";
+import attendanceRouter from "./backend/routers/attendanceRouter";
+import teacherRouter from "./backend/routers/teacherRouter";
 
 dotenv.config();
 
