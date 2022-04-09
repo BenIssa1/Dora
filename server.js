@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import classRoomRouter from "./backend/routers/classRoomRouter";
 import matterRouter from "./backend/routers/matterRouter";
 import establishmentRouter from "./backend/routers/establishmentRouter";
-// import userRouter from "./backend/routers/userRouter";
+import userRouter from "./backend/routers/userRouter";
 import roleRouter from "./backend/routers/roleRouter";
 import studentRouter from "./backend/routers/studentRouter";
 import noteRouter from "./backend/routers/notetRouter";
@@ -37,7 +37,7 @@ app.use("/api/establishment", establishmentRouter);
 // Establisments
 app.use("/api/role", roleRouter);
 // Users
-// app.use("/api/users", userRouter);
+app.use("/api/users", userRouter);
 // Students
 app.use("/api/students", studentRouter);
 // Notes
