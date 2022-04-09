@@ -20,10 +20,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-mongoose.connect(process.env.MONGODB_URL || "mongodb://localhost/dora", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(
+  "mongodb+srv://issa:issa0522@cluster0.mtu3s.mongodb.net/dora-school?retryWrites=true&w=majority",
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }
+);
 
 // ClassRooms
 app.use("/api/class-room", classRoomRouter);
