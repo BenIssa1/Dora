@@ -18,4 +18,13 @@ establishmentRouter.get(
   })
 );
 
+establishmentRouter.get(
+  "/",
+  expressAsyncHandler(async (req, res) => {
+    const establishments = await Establishment.find({});
+
+    res.send(establishments);
+  })
+);
+
 export default establishmentRouter;

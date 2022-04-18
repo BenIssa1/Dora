@@ -6,16 +6,20 @@ import Student from "../models/StudentModel";
 import Note from "../models/NoteModel";
 import OverallAverage from "../models/OverallAverageModel";
 import QuarterAverage from "../models/QuarterAverageModel";
+import { isAuth, isParent, isVerified, isTeacherOrIsParent } from "../utils";
 
 const studentRouter = express.Router();
 
 studentRouter.post(
   "/",
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const student = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      parent: req.body.parent,
+      parent: req.user._id,
       establishment: req.body.establishment,
       classRoom: req.body.classRoom,
     };
@@ -29,8 +33,23 @@ studentRouter.post(
   })
 );
 
+studentRouter.get(
+  "/parent",
+  isAuth,
+  isVerified,
+  isParent,
+  expressAsyncHandler(async (req, res) => {
+    const students = await Student.find({ parent: req.user._id });
+
+    res.send(students);
+  })
+);
+
 studentRouter.put(
   "/:id",
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const student = await Student.findById(req.params.id);
     if (student) {
@@ -49,6 +68,9 @@ studentRouter.put(
 
 studentRouter.delete(
   "/:id",
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const student = await Student.findById(req.params.id);
     if (student) {
@@ -62,7 +84,11 @@ studentRouter.delete(
 
 studentRouter.get(
   "/:id",
+  isAuth,
+  isVerified,
+  isTeacherOrIsParent,
   expressAsyncHandler(async (req, res) => {
+    console.log(req.user);
     const student = await Student.findById(req.params.id);
 
     if (student) {
@@ -74,26 +100,10 @@ studentRouter.get(
 );
 
 studentRouter.get(
-  "/all/:establishment_id/:classRoom_id",
-  expressAsyncHandler(async (req, res) => {
-    const students = await Student.find(
-      {
-        establishment: req.params.establishment_id,
-        classRoom: req.params.classRoom_id,
-      },
-      { firstName: 1, lastName: 1 }
-    );
-
-    if (students) {
-      res.send(students);
-    } else {
-      res.status(404).send({ message: "Student Not Found" });
-    }
-  })
-);
-
-studentRouter.get(
   "/overall-average/:student",
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const averages = await OverallAverage.find({
       student: req.params.student,
@@ -134,25 +144,28 @@ studentRouter.get(
 );
 
 studentRouter.get(
-  "/quater-average/:student",
+  "/quater-average/:trimester/:student",
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const quaterAverages = await QuarterAverage.find(
       {
         student: req.params.student,
+        trimester: req.params.trimester,
       },
       { average: 1, matter: 1 }
     ).populate("matter");
 
-    if (quaterAverages.length > 0) {
-      res.send(quaterAverages);
-    } else {
-      res.status(404).send({ message: "Student Not Found" });
-    }
+    res.send(quaterAverages);
   })
 );
 
 studentRouter.get(
   "/matter-notes/:student/:trimester/:matter",
+  isAuth,
+  isVerified,
+  isTeacherOrIsParent,
   expressAsyncHandler(async (req, res) => {
     const notes = await Note.find(
       {

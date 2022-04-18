@@ -2,8 +2,7 @@
 
 import mongoose from "mongoose";
 
-const attendanceSchema = new mongoose.Schema({
-  type: { type: String, required: true },
+const attendanceHistoriqueSchema = new mongoose.Schema({
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Teacher",
@@ -12,11 +11,6 @@ const attendanceSchema = new mongoose.Schema({
   matter: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Matter",
-    required: true,
-  },
-  student: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Student",
     required: true,
   },
   classRoom: {
@@ -32,7 +26,26 @@ const attendanceSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  attendance: {
+    type: Number,
+    required: true,
+  },
+  sick: {
+    type: Number,
+    required: true,
+  },
+  delay: {
+    type: Number,
+    required: true,
+  },
+  absence: {
+    type: Number,
+    required: true,
+  },
 });
 
-const Attendance = mongoose.model("Attendance", attendanceSchema);
-export default Attendance;
+const attendanceHistorique = mongoose.model(
+  "AttendancesHistorique",
+  attendanceHistoriqueSchema
+);
+export default attendanceHistorique;

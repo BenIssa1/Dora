@@ -16,4 +16,13 @@ trimesterRouter.get(
   })
 );
 
+trimesterRouter.get(
+  "/",
+  expressAsyncHandler(async (req, res) => {
+    const trimesters = await Trimester.find({});
+
+    res.send(trimesters);
+  })
+);
+
 export default trimesterRouter;

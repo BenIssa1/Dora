@@ -5,11 +5,14 @@ import expressAsyncHandler from "express-async-handler";
 import Note from "../models/NoteModel";
 import QuarterAverage from "../models/QuarterAverageModel";
 import OverallAverage from "../models/OverallAverageModel";
+import { isAuth, isVerifiedAndIsVerifiedCredentials } from "../utils";
 
 const noteRouter = express.Router();
 
 noteRouter.post(
   "/",
+  isAuth,
+  isVerifiedAndIsVerifiedCredentials,
   expressAsyncHandler(async (req, res) => {
     const noteValues = {
       trimester: req.body.trimester,
@@ -17,8 +20,8 @@ noteRouter.post(
       coefficient: req.body.coefficient,
       note: req.body.note,
       isTen: req.body.isTen,
-      teacher: req.body.teacher,
-      matter: req.body.matter,
+      teacher: req.user.teacherDatas._id,
+      matter: req.user.teacherDatas.matter._id,
       student: req.body.student,
     };
 
@@ -29,7 +32,9 @@ noteRouter.post(
     res.status(201).send({ message: "New Note Created", note: createdNote });
 
     // create student avearge
-    const { matter, trimester, student, coefficient, teacher } = req.body;
+    const { trimester, student, coefficient } = req.body;
+    const teacher = req.user.teacherDatas._id;
+    const matter = req.user.teacherDatas.matter._id;
     const quarterAverage = await QuarterAverage.findOne({
       student,
       matter,
@@ -80,6 +85,8 @@ noteRouter.post(
 
 noteRouter.put(
   "/:id",
+  isAuth,
+  isVerifiedAndIsVerifiedCredentials,
   expressAsyncHandler(async (req, res) => {
     const note = await Note.findById(req.params.id);
 
@@ -132,6 +139,8 @@ noteRouter.put(
 
 noteRouter.delete(
   "/:id",
+  isAuth,
+  isVerifiedAndIsVerifiedCredentials,
   expressAsyncHandler(async (req, res) => {
     const note = await Note.findById(req.params.id);
 

@@ -9,7 +9,6 @@ import UserVerification from "../models/UserVerification";
 import Teacher from "../models/TeacherModel";
 import ClassRoom from "../models/ClassRoomModel";
 import bcrypt from "bcryptjs";
-// import bcryptVerification from "bcrypt";
 import { generateToken } from "../utils";
 import dotenv from "dotenv";
 
@@ -33,6 +32,7 @@ let transporter = nodemailer.createTransport({
   host: process.env.SMPT_HOST,
   port: process.env.SMPT_PORT,
   service: process.env.SMPT_SERVICE,
+  secure: false,
   auth: {
     user: process.env.SMPT_MAIL,
     pass: process.env.SMPT_PASSWORD,
@@ -40,19 +40,20 @@ let transporter = nodemailer.createTransport({
 });
 
 // testing success
-// transporter.verify((error, success) => {
-//   if (error) {
-//     console.log(error);
-//   } else {
-//     console.log("Ready for messages");
-//     console.log(success);
-//   }
-// });
+transporter.verify((error, success) => {
+  if (error) {
+    console.log(error);
+  } else {
+    console.log("Ready for messages");
+    console.log(success);
+  }
+});
 
+// Signin User
 userRouter.post(
   "/signin",
   expressAsyncHandler(async (req, res) => {
-    const user = await User.findOne({ email: req.body.email }).populate("role");
+    const user = await User.findOne({ email: req.body.email });
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
         function isKeyExists(obj, key) {
@@ -69,8 +70,9 @@ userRouter.post(
           lastName: user.lastName,
           phone: user.phone,
           email: user.email,
-          role: user.role,
-          token: generateToken(user),
+          verified: user.verified,
+          isTeacher: user.isTeacher,
+          // token: generateToken(user),
         };
 
         if (isKeyExists(user, "teacher")) {
@@ -80,8 +82,11 @@ userRouter.post(
 
           if (teacher) {
             userDatas.teacherDatas = teacher;
+            user.teacherDatas = teacher;
           }
         }
+
+        userDatas.token = generateToken(user);
 
         res.send(userDatas);
       }
@@ -91,6 +96,7 @@ userRouter.post(
   })
 );
 
+// Register User
 userRouter.post(
   "/register",
   expressAsyncHandler(async (req, res) => {
@@ -99,7 +105,6 @@ userRouter.post(
       lastName: req.body.lastName,
       phone: req.body.phone,
       email: req.body.email,
-      role: req.body.role,
       password: bcrypt.hashSync(req.body.password, 8),
     };
 
@@ -125,6 +130,7 @@ userRouter.post(
 
       const createdTeacher = await teacher.save();
       userData.teacher = createdTeacher._id;
+      userData.isTeacher = true;
     }
 
     const user = new User(userData);
@@ -133,6 +139,7 @@ userRouter.post(
   })
 );
 
+// Update User
 userRouter.put(
   "/:id",
   expressAsyncHandler(async (req, res) => {
@@ -153,7 +160,8 @@ userRouter.put(
 // send verification email
 const sendVerificationEmail = ({ _id, email }, res) => {
   // url to be used in the email
-  const currentUrl = "https://issa-tesla.herokuapp.com/";
+  // const currentUrl = "https://issa-dora.herokuapp.com/";
+  const currentUrl = "http://localhost:5000/";
 
   const uniqueString = uuidv4() + _id;
 

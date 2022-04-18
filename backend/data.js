@@ -4,24 +4,31 @@ const data = {
   classRooms: [
     {
       name: "6ème",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "5ème",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "4ème",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "3ème",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "2nde",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "1ère",
+      establishment: "625ec205c76171a5a65937e0",
     },
     {
       name: "Tle",
+      establishment: "625ec205c76171a5a65937e0",
     },
   ],
   matters: [
@@ -45,17 +52,6 @@ const data = {
 
     {
       name: "Lycée 2",
-    },
-  ],
-  roles: [
-    {
-      name: "PARENT",
-    },
-    {
-      name: "ENSEIGNANT",
-    },
-    {
-      name: "ADMIN",
     },
   ],
   trimester: [

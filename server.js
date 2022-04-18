@@ -7,7 +7,6 @@ import classRoomRouter from "./backend/routers/classRoomRouter";
 import matterRouter from "./backend/routers/matterRouter";
 import establishmentRouter from "./backend/routers/establishmentRouter";
 import userRouter from "./backend/routers/userRouter";
-import roleRouter from "./backend/routers/roleRouter";
 import studentRouter from "./backend/routers/studentRouter";
 import noteRouter from "./backend/routers/notetRouter";
 import trimesterRouter from "./backend/routers/trimesterRouter";
@@ -28,14 +27,17 @@ mongoose.connect(
   }
 );
 
+// mongoose.connect(process.env.MONGODB_URL || "mongodb://localhost/dora", {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true,
+// });
+
 // ClassRooms
 app.use("/api/class-room", classRoomRouter);
 // Mattes
 app.use("/api/matter", matterRouter);
 // Establisments
 app.use("/api/establishment", establishmentRouter);
-// Establisments
-app.use("/api/role", roleRouter);
 // Users
 app.use("/api/users", userRouter);
 // Students

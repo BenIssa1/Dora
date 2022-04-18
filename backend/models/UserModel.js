@@ -9,8 +9,10 @@ const userSchema = new mongoose.Schema(
     phone: { type: Number, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    isAdmin: { type: Boolean, default: false },
+    isTeacher: { type: Boolean, default: false },
     verified: { type: Boolean, default: false },
-    role: { type: mongoose.Schema.Types.ObjectId, ref: "Role", required: true },
+    isVerifiedCredentials: { type: Boolean, default: false },
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",

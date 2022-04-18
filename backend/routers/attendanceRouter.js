@@ -3,58 +3,151 @@
 import express from "express";
 import expressAsyncHandler from "express-async-handler";
 import Attendance from "../models/AttendanceModel";
+import AttendanceHistorique from "../models/AttendancesHistoriqueModel";
 
 const attendanceRouter = express.Router();
 
 attendanceRouter.post(
   "/",
   expressAsyncHandler(async (req, res) => {
-    const attendances = {
-      type: req.body.type,
-      teacher: req.body.teacher,
-      matter: req.body.matter,
-      student: req.body.student,
-      classRoom: req.body.classRoom,
-    };
+    let now = new Date();
+    let date =
+      now.getFullYear() + "-" + `${now.getMonth() + 1}` + "-" + now.getDate();
+    let hours = now.getHours() + ":" + now.getMinutes();
 
-    const attendance = new Attendance(attendances);
-    const createdAttendances = await attendance.save();
+    let presences = [];
+    let absences = [];
+    let malades = [];
+    let retards = [];
 
-    res
-      .status(201)
-      .send({ message: "New Student Created", student: createdAttendances });
+    const { teacher, matter, classRoom, students } = req.body;
+
+    for (let index = 0; index < students.length; index++) {
+      const element = students[index];
+
+      const attendanceData = {
+        type: element.type,
+        teacher: teacher,
+        matter: matter,
+        student: element.id,
+        classRoom: classRoom,
+        date,
+        hours,
+      };
+
+      const attendance = new Attendance(attendanceData);
+      const createdAttendance = await attendance.save();
+
+      if (createdAttendance.type === "Present") {
+        presences.push(createdAttendance);
+      } else if (createdAttendance.type === "Absent") {
+        absences.push(createdAttendance);
+      } else if (createdAttendance.type === "Malade") {
+        malades.push(createdAttendance);
+      } else if (createdAttendance.type === "Retard") {
+        retards.push(createdAttendance);
+      }
+    }
+
+    res.status(201).send({
+      message: "New Attendances Created",
+      presences: presences.length,
+      absences: absences.length,
+      retards: retards.length,
+      malades: malades.length,
+      date,
+      hours,
+    });
+
+    const attendanceHistorique = new AttendanceHistorique({
+      teacher: teacher,
+      matter: matter,
+      classRoom: classRoom,
+      date,
+      hours,
+      attendance: presences.length,
+      absence: absences.length,
+      delay: retards.length,
+      sick: malades.length,
+    });
+    await attendanceHistorique.save();
   })
 );
 
 attendanceRouter.put(
-  "/:id",
+  "/",
   expressAsyncHandler(async (req, res) => {
-    const attendance = await Attendance.findById(req.params.id);
-    if (attendance) {
-      attendance.type = req.body.type || attendance.type;
-      attendance.teacher = req.body.teacher || attendance.teacher;
-      attendance.matter = req.body.matter || attendance.matter;
-      attendance.student = req.body.student || attendance.student;
-      attendance.classRoom = req.body.classRoom || attendance.classRoom;
+    let presences = [];
+    let absences = [];
+    let malades = [];
+    let retards = [];
 
+    const { students, attendanceHistoriqueId } = req.body;
+
+    for (let index = 0; index < students.length; index++) {
+      const element = students[index];
+
+      const attendance = await Attendance.findById(element.id);
+      attendance.type = element.type;
       const updatedAttendance = await attendance.save();
-      res.send({
-        message: "Updated Attendance",
-        attendance: updatedAttendance,
-      });
-    } else {
-      res.status(404).send({ message: "Attendance Not Found" });
+
+      if (updatedAttendance.type === "Present") {
+        presences.push(updatedAttendance);
+      } else if (updatedAttendance.type === "Absent") {
+        absences.push(updatedAttendance);
+      } else if (updatedAttendance.type === "Malade") {
+        malades.push(updatedAttendance);
+      } else if (updatedAttendance.type === "Retard") {
+        retards.push(updatedAttendance);
+      }
     }
+
+    const attendanceHistorique = await AttendanceHistorique.findById(
+      attendanceHistoriqueId
+    );
+
+    attendanceHistorique.attendance = presences.length;
+    attendanceHistorique.absence = absences.length;
+    attendanceHistorique.delay = retards.length;
+    attendanceHistorique.sick = malades.length;
+
+    await attendanceHistorique.save();
+
+    res.status(201).send({
+      message: "Attendances Updated",
+      presences: presences.length,
+      absences: absences.length,
+      retards: retards.length,
+      malades: malades.length,
+    });
   })
 );
 
 attendanceRouter.delete(
   "/:id",
   expressAsyncHandler(async (req, res) => {
-    const attendance = await Attendance.findById(req.params.id);
-    if (attendance) {
-      const deleteAttendance = await attendance.remove();
-      res.send({ message: "Attendance Deleted", attendance: deleteAttendance });
+    const attendancesHistorique = await AttendanceHistorique.findById(
+      req.params.id
+    );
+    if (attendancesHistorique) {
+      const deleteAttendance = await attendancesHistorique.remove();
+
+      const attendancesStudents = await Attendance.find({
+        teacher: deleteAttendance.teacher,
+        classRoom: deleteAttendance.classRoom,
+        date: deleteAttendance.date,
+        hours: deleteAttendance.hours,
+      });
+
+      res.send({
+        message: "Attendance Historique Deleted",
+        attendance: deleteAttendance,
+      });
+
+      for (let index = 0; index < attendancesStudents.length; index++) {
+        const attendance = attendancesStudents[index];
+        await attendance.remove();
+      }
     } else {
       res.status(404).send({ message: "Attendance Not Found" });
     }
@@ -62,29 +155,23 @@ attendanceRouter.delete(
 );
 
 attendanceRouter.get(
-  "/:id",
+  "/attendance-historique/:id",
   expressAsyncHandler(async (req, res) => {
-    const attendance = await Attendance.findById(req.params.id);
+    const attendancesHistorique = await AttendanceHistorique.findById(
+      req.params.id
+    );
 
-    if (attendance) {
-      res.send(attendance);
-    } else {
-      res.status(404).send({ message: "Attendance Not Found" });
-    }
-  })
-);
+    if (attendancesHistorique) {
+      const attendancesStudents = await Attendance.find({
+        teacher: attendancesHistorique.teacher,
+        classRoom: attendancesHistorique.classRoom,
+        date: attendancesHistorique.date,
+        hours: attendancesHistorique.hours,
+      }).populate("student");
 
-attendanceRouter.get(
-  "/attendance-of-a-class/:classRoom",
-  expressAsyncHandler(async (req, res) => {
-    const attendance = await Attendance.find({
-      classRoom: req.params.classRoom,
-    })
-      .sort({ createdAt: -1 })
-      .populate("student");
-
-    if (attendance) {
-      res.send(attendance);
+      res.send({
+        attendances: attendancesStudents,
+      });
     } else {
       res.status(404).send({ message: "Attendance Not Found" });
     }
