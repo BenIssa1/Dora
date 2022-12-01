@@ -21,6 +21,7 @@ const teacherSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    solde: { type: Number, required: false },
   },
   {
     timestamps: true,

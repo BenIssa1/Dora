@@ -4,6 +4,9 @@ import express from "express";
 import expressAsyncHandler from "express-async-handler";
 import Attendance from "../models/AttendanceModel";
 import AttendanceHistorique from "../models/AttendancesHistoriqueModel";
+import Matter from "../models/MatterModel";
+import Notification from "../models/NotificationModel";
+import Student from "../models/StudentModel";
 
 const attendanceRouter = express.Router();
 
@@ -46,6 +49,24 @@ attendanceRouter.post(
         malades.push(createdAttendance);
       } else if (createdAttendance.type === "Retard") {
         retards.push(createdAttendance);
+      }
+
+      // Create student notification for attendance
+      const studentData = await Student.findById(element.id);
+      const matterData = await Matter.findById(matter);
+
+      if (studentData && matterData) {
+        const notification = new Notification({
+          message: `Votre enfant a ete  ${
+            createdAttendance.type !== "Retard"
+              ? createdAttendance.type
+              : `en ${createdAttendance.type}`
+          } au ${matterData.name} a ${hours}`,
+          user_id: studentData.parent,
+          date,
+          hours,
+        });
+        await notification.save();
       }
     }
 

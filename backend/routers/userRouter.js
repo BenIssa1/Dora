@@ -76,9 +76,11 @@ userRouter.post(
         };
 
         if (isKeyExists(user, "teacher")) {
-          const teacher = await Teacher.findOne(user.teacher).populate(
+          const teacher = await Teacher.findById(user.teacher).populate(
             "matter establishment"
           );
+
+          console.log(teacher);
 
           if (teacher) {
             userDatas.teacherDatas = teacher;
@@ -132,7 +134,6 @@ userRouter.post(
       userData.teacher = createdTeacher._id;
       userData.isTeacher = true;
     }
-
     const user = new User(userData);
     const createdUser = await user.save();
     sendVerificationEmail(createdUser, res);

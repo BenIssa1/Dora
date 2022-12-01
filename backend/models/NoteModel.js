@@ -6,8 +6,8 @@ const noteSchema = new mongoose.Schema(
   {
     noteType: { type: String, required: true },
     note: { type: Number, required: true },
-    coefficient: { type: Number, required: true },
-    isTen: { type: Boolean, default: false },
+    // coefficient: { type: Number, required: true },
+    // isTen: { type: Boolean, default: false },
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",

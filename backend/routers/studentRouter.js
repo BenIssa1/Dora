@@ -7,32 +7,105 @@ import Note from "../models/NoteModel";
 import OverallAverage from "../models/OverallAverageModel";
 import QuarterAverage from "../models/QuarterAverageModel";
 import { isAuth, isParent, isVerified, isTeacherOrIsParent } from "../utils";
+import Notification from "../models/NotificationModel";
+import Teacher from "../models/TeacherModel";
+import User from "../models/UserModel";
 
 const studentRouter = express.Router();
 
+// Cree un eleve
 studentRouter.post(
   "/",
-  isAuth,
-  isVerified,
-  isParent,
+  // isAuth,
+  // isVerified,
+  // isParent,
   expressAsyncHandler(async (req, res) => {
-    const student = {
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      parent: req.user._id,
-      establishment: req.body.establishment,
-      classRoom: req.body.classRoom,
-    };
+    const { returnContext, responcecode, referenceNumber } = req.query;
+    const context = JSON.parse(returnContext);
 
-    const teacher = new Student(student);
-    const createdTeacher = await teacher.save();
+    const user = await User.findOne({ _id: context.userId });
 
-    res
-      .status(201)
-      .send({ message: "New Student Created", student: createdTeacher });
+    // verifie est-ce que le parent a un compte utilisateur
+    if (user) {
+      // verifie est-ce que l'eleve n'existe pas deja
+      const student = await Student.findOne({
+        matricule: context.studentDatas.matricule,
+      });
+
+      // si l'eleve existe. je fais une redirection vers une page
+      if (student) {
+        let message = `Eleve existe deja`;
+        res.redirect(`/api/students/verified?error=true&message=${message}`);
+      } else {
+        // verifie est-ce que la reference number existe pour mieux me rassurer que l'eleve n'existe pas
+        const studentReference = await Student.findOne({
+          referenceNumber: referenceNumber,
+        });
+
+        // si l'eleve existe. je fais une redirection vers une page
+        if (studentReference) {
+          let message = `Eleve existe deja`;
+          res.redirect(`/api/students/verified?error=true&message=${message}`);
+        } else {
+          // verifie est-ce que la responcecode est bon avant d'ajouter l'eleve
+          if (responcecode == "0") {
+            const student = context.studentDatas;
+            const teacher = new Student(student);
+            const createdTeacher = await teacher.save();
+
+            res.status(201).send({
+              message: "New Student Created",
+              student: createdTeacher,
+            });
+
+            const teachers = await Teacher.find({
+              establishment: context.studentDatas.establishment,
+            });
+
+            // Paiement des enseignants
+
+            const teacherDatas = [];
+
+            for (
+              let indexTeacher = 0;
+              indexTeacher < teachers.length;
+              indexTeacher++
+            ) {
+              const teacher = teachers[indexTeacher];
+
+              for (
+                let indexClassroom = 0;
+                indexClassroom < teacher.classRoom.length;
+                indexClassroom++
+              ) {
+                const classroom = teacher.classRoom[indexClassroom];
+
+                if (req.body.classRoom == classroom) {
+                  teacher.solde += 175;
+                  await teacher.save();
+
+                  teacherDatas.push(teacher);
+                }
+              }
+            }
+
+            res.redirect(`/api/students/verified`);
+          } else {
+            let message = `Une erreur lors de la validation du paiement de votre enfant. Ref : ${referenceNumber}`;
+            res.redirect(
+              `/api/students/verified?error=true&message=${message}`
+            );
+          }
+        }
+      }
+    } else {
+      let message = `Cet utlisatuer n'existe pas`;
+      res.redirect(`/api/students/verified?error=true&message=${message}`);
+    }
   })
 );
 
+// Recuperer les eleves du parent
 studentRouter.get(
   "/parent",
   isAuth,
@@ -45,6 +118,20 @@ studentRouter.get(
   })
 );
 
+// Recuperer les notifications du parent connecte
+studentRouter.get(
+  "/notifications",
+  isAuth,
+  isVerified,
+  isParent,
+  expressAsyncHandler(async (req, res) => {
+    const notifications = await Notification.find({ user_id: req.user._id });
+
+    res.send(notifications);
+  })
+);
+
+// Modifier les informations d'un eleve
 studentRouter.put(
   "/:id",
   isAuth,
@@ -66,6 +153,7 @@ studentRouter.put(
   })
 );
 
+// Supprimer un eleve
 studentRouter.delete(
   "/:id",
   isAuth,
@@ -82,13 +170,13 @@ studentRouter.delete(
   })
 );
 
+// Recuperer un eleve
 studentRouter.get(
   "/:id",
   isAuth,
   isVerified,
   isTeacherOrIsParent,
   expressAsyncHandler(async (req, res) => {
-    console.log(req.user);
     const student = await Student.findById(req.params.id);
 
     if (student) {
@@ -99,6 +187,7 @@ studentRouter.get(
   })
 );
 
+// Recuperer la moyenne generale de l'eleve
 studentRouter.get(
   "/overall-average/:student",
   isAuth,
@@ -143,6 +232,7 @@ studentRouter.get(
   })
 );
 
+// Recuperer les moyennes d'une trimestre de l'eleve
 studentRouter.get(
   "/quater-average/:trimester/:student",
   isAuth,
@@ -161,6 +251,7 @@ studentRouter.get(
   })
 );
 
+// Recuperer les notes d'une matiere en fonction du trimestre et de la matiere
 studentRouter.get(
   "/matter-notes/:student/:trimester/:matter",
   isAuth,
@@ -183,5 +274,26 @@ studentRouter.get(
     }
   })
 );
+
+// Recuperer la moyenne d'une matiere en fonction du trimestre
+studentRouter.get(
+  "/quarter-average/:student/:trimester/:matter",
+  isAuth,
+  isVerified,
+  isTeacherOrIsParent,
+  expressAsyncHandler(async (req, res) => {
+    const quaterAverages = await QuarterAverage.find({
+      student: req.params.student,
+      trimester: req.params.trimester,
+      matter: req.params.matter,
+    });
+
+    res.send(quaterAverages);
+  })
+);
+
+studentRouter.get("/verified", (req, res) => {
+  res.sendFile(path.join(__dirname, "/views/verifiedPayment.html"));
+});
 
 export default studentRouter;

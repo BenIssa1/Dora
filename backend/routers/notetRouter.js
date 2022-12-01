@@ -6,9 +6,13 @@ import Note from "../models/NoteModel";
 import QuarterAverage from "../models/QuarterAverageModel";
 import OverallAverage from "../models/OverallAverageModel";
 import { isAuth, isVerifiedAndIsVerifiedCredentials } from "../utils";
+import AddAverage from "../models/AddAverageModel";
+import Student from "../models/StudentModel";
+import Notification from "../models/NotificationModel";
 
 const noteRouter = express.Router();
 
+// Donner une note
 noteRouter.post(
   "/",
   isAuth,
@@ -17,9 +21,7 @@ noteRouter.post(
     const noteValues = {
       trimester: req.body.trimester,
       noteType: req.body.noteType,
-      coefficient: req.body.coefficient,
       note: req.body.note,
-      isTen: req.body.isTen,
       teacher: req.user.teacherDatas._id,
       matter: req.user.teacherDatas.matter._id,
       student: req.body.student,
@@ -29,28 +31,73 @@ noteRouter.post(
     const note = new Note(noteValues);
     const createdNote = await note.save();
 
-    res.status(201).send({ message: "New Note Created", note: createdNote });
+    const noteValue =
+      req.body.noteType === "Interrogation"
+        ? `${req.body.note}/10`
+        : `${req.body.note}/20`;
+
+    // Create Notification
+
+    let now = new Date();
+    let date =
+      now.getFullYear() + "-" + `${now.getMonth() + 1}` + "-" + now.getDate();
+    let hours = now.getHours() + ":" + now.getMinutes();
+
+    const studentData = await Student.findById(noteValues.student);
+
+    if (studentData) {
+      const notification = new Notification({
+        message: `Votre enfant a eu ${noteValue} en ${
+          req.body.noteType === "Interrogation" ? "Interrogation" : "Devoir"
+        } en ${req.user.teacherDatas.matter.name}`,
+        user_id: studentData.parent,
+        date,
+        hours,
+      });
+      await notification.save();
+    }
+
+    res
+      .status(201)
+      .send({ message: "New Note Created", note: createdNote, noteValue });
 
     // create student avearge
-    const { trimester, student, coefficient } = req.body;
+    const { trimester, student } = req.body;
     const teacher = req.user.teacherDatas._id;
     const matter = req.user.teacherDatas.matter._id;
+
     const quarterAverage = await QuarterAverage.findOne({
       student,
       matter,
       trimester,
     });
 
+    const addAverage = await AddAverage.findOne({
+      trimester,
+      matter,
+      teacher,
+    });
+
+    let addAverageValue = 0;
+
+    if (addAverage) {
+      addAverageValue = addAverage.value;
+    }
+
     if (quarterAverage) {
       calculQuarterAverage(student, matter, trimester).then(async (average) => {
-        quarterAverage.average = average;
+        quarterAverage.average =
+          parseFloat(average) +
+          parseFloat(Number.parseFloat(addAverageValue).toFixed(2));
         await quarterAverage.save();
       });
     } else {
       calculQuarterAverage(student, matter, trimester).then(async (average) => {
+        console.log(average + addAverageValue);
         const quarterAverage = new QuarterAverage({
-          average,
-          coefficient,
+          average:
+            parseFloat(average) +
+            parseFloat(Number.parseFloat(addAverageValue).toFixed(2)),
           teacher,
           matter,
           student,
@@ -83,6 +130,7 @@ noteRouter.post(
   })
 );
 
+// Modifier une note
 noteRouter.put(
   "/:id",
   isAuth,
@@ -93,9 +141,7 @@ noteRouter.put(
     if (note) {
       note.trimester = req.body.trimester || note.trimester;
       note.noteType = req.body.noteType || note.noteType;
-      note.coefficient = req.body.coefficient || note.coefficient;
       note.note = req.body.note || note.note;
-      note.isTen = req.body.isTen || note.isTen;
       note.student = req.body.student || note.student;
 
       const updatedNote = await note.save();
@@ -132,11 +178,12 @@ noteRouter.put(
         });
       }
     } else {
-      res.status(404).send({ message: "Student not Not Found" });
+      res.status(404).send({ message: "Student notes not Not Found" });
     }
   })
 );
 
+// Supprimer une note
 noteRouter.delete(
   "/:id",
   isAuth,
@@ -192,6 +239,65 @@ noteRouter.delete(
   })
 );
 
+// Donner plus aux eleves
+noteRouter.post(
+  "/add-average",
+  isAuth,
+  isVerifiedAndIsVerifiedCredentials,
+  expressAsyncHandler(async (req, res) => {
+    const noteValues = {
+      trimester: req.body.trimester,
+      value: req.body.value,
+      teacher: req.user.teacherDatas._id,
+      matter: req.user.teacherDatas.matter._id,
+      establishment: req.user.teacherDatas.establishment._id,
+      classRoom: req.body.classRoom,
+    };
+
+    // create add average
+    const addAverage = new AddAverage(noteValues);
+    const createdAddAverage = await addAverage.save();
+
+    res
+      .status(201)
+      .send({ message: "New Add Avearge Created", createdAddAverage });
+
+    const { classRoom, trimester, value } = req.body;
+    const establishment = noteValues.establishment;
+    const matter = noteValues.matter;
+
+    const students = await Student.find({
+      establishment,
+      classRoom,
+    });
+
+    students.map(async (student) => {
+      if (student) {
+        const quarterAverage = await QuarterAverage.findOne({
+          student: student._id,
+          matter,
+          trimester,
+        });
+
+        if (quarterAverage) {
+          quarterAverage.average = quarterAverage.average + value;
+          await quarterAverage.save();
+
+          const overallAverages = await OverallAverage.findOne({
+            student: student._id,
+            trimester,
+          });
+
+          calculOverallAverage(student, trimester).then(async (average) => {
+            overallAverages.average = average;
+            await overallAverages.save();
+          });
+        }
+      }
+    });
+  })
+);
+
 const calculQuarterAverage = async (student, matter, trimester) => {
   const notes = await Note.find({
     student,
@@ -206,13 +312,12 @@ const calculQuarterAverage = async (student, matter, trimester) => {
     notes.map((note) => {
       totalAverage += note.note;
 
-      if (note.isTen) {
+      if (note.noteType === "Interrogation") {
         totalDivisible += 0.5;
       } else {
         totalDivisible += 1;
       }
     });
-
     return (totalAverage / totalDivisible).toFixed(2);
   }
   return false;
@@ -229,8 +334,8 @@ const calculOverallAverage = async (student, trimester) => {
 
   if (averages.length > 0) {
     averages.map((average) => {
-      totalAverage += average.average * average.coefficient;
-      totalDivisible += average.coefficient;
+      totalAverage += average.average * 1;
+      totalDivisible += 1;
     });
 
     return (totalAverage / totalDivisible).toFixed(2);

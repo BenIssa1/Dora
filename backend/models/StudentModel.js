@@ -6,6 +6,9 @@ const studentSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    matricule: { type: Number, required: true },
+    referenceNumber: { type: String, required: true },
+    isPaid: { type: Boolean, default: false },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
