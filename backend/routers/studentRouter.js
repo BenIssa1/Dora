@@ -13,6 +13,10 @@ import User from "../models/UserModel";
 
 const studentRouter = express.Router();
 
+// path for static verified page
+import path from "path";
+const __dirname = path.resolve();
+
 // Cree un eleve
 studentRouter.post(
   "/",
@@ -104,6 +108,10 @@ studentRouter.post(
     }
   })
 );
+
+studentRouter.get("/verified", (req, res) => {
+  res.sendFile(path.join(__dirname, "/views/verifiedPayment.html"));
+});
 
 // Recuperer les eleves du parent
 studentRouter.get(
@@ -291,9 +299,5 @@ studentRouter.get(
     res.send(quaterAverages);
   })
 );
-
-studentRouter.get("/verified", (req, res) => {
-  res.sendFile(path.join(__dirname, "/views/verifiedPayment.html"));
-});
 
 export default studentRouter;
