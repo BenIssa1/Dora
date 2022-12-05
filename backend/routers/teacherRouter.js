@@ -5,6 +5,7 @@ import expressAsyncHandler from "express-async-handler";
 import Teacher from "../models/TeacherModel";
 import ClassRoom from "../models/ClassRoomModel";
 import Student from "../models/StudentModel";
+import NotificationPayment from "../models/NotificationPaymentModel";
 import { isAuth, isTeacher } from "../utils";
 
 const teacherRouter = express.Router();
@@ -60,6 +61,47 @@ teacherRouter.get(
       res
         .status(200)
         .send({ message: "Solde est insuffisant", teacher: teacher });
+    }
+  })
+);
+
+teacherRouter.post(
+  "/payment-retrait",
+  isAuth,
+  isTeacher,
+  expressAsyncHandler(async (req, res) => {
+    const { montant } = req.body;
+    const { matter, establishment, solde, _id } = req.user.teacherDatas;
+
+    if (montant > solde) {
+      res.status(200).send({
+        message: `Solde est insuffisant. voici le solde du compte : ${solde}`,
+      });
+    } else {
+      const teacher = await Teacher.findById(_id);
+      teacher.solde -= montant;
+      await teacher.save();
+
+      const notificationValues = {
+        type: req.body.type,
+        numero: req.body.numero,
+        montant: req.body.montant,
+        nom: req.user.lastName,
+        prenom: req.user.firstName,
+        matter: matter.name,
+        establishment: establishment.name,
+      };
+
+      // create notification payment
+      const notificationPayment = new NotificationPayment(notificationValues);
+      const createdNotification = await notificationPayment.save();
+
+      // Implementer le code de l'email
+
+      res.status(200).send({
+        message: `Successfully`,
+        createdNotification,
+      });
     }
   })
 );
