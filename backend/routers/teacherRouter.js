@@ -51,20 +51,6 @@ teacherRouter.get(
   })
 );
 
-teacherRouter.get(
-  "/payment/:teacherId/:montant",
-  expressAsyncHandler(async (req, res) => {
-    const teacher = await Teacher.findById(req.params.teacherId);
-    if (teacher.solde > req.params.montant) {
-      res.status(200).send({ message: "Successfully", teacher: teacher });
-    } else {
-      res
-        .status(200)
-        .send({ message: "Solde est insuffisant", teacher: teacher });
-    }
-  })
-);
-
 teacherRouter.post(
   "/payment-retrait",
   isAuth,
