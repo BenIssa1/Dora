@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import classRoomRouter from "./backend/routers/classRoomRouter";
 import matterRouter from "./backend/routers/matterRouter";
+import abonnementRouter from "./backend/routers/abonnementRouter";
 import establishmentRouter from "./backend/routers/establishmentRouter";
 import userRouter from "./backend/routers/userRouter";
 import studentRouter from "./backend/routers/studentRouter";
@@ -12,6 +13,7 @@ import noteRouter from "./backend/routers/notetRouter";
 import trimesterRouter from "./backend/routers/trimesterRouter";
 import attendanceRouter from "./backend/routers/attendanceRouter";
 import teacherRouter from "./backend/routers/teacherRouter";
+import exempleRouter from "./backend/routers/ExempleRouter";
 
 dotenv.config();
 
@@ -36,6 +38,10 @@ mongoose.connect(process.env.MONGODB_URL || "mongodb://localhost/dora", {
 app.use("/api/class-room", classRoomRouter);
 // Mattes
 app.use("/api/matter", matterRouter);
+// Abonnement
+app.use("/api/abonnement", abonnementRouter);
+// Exemple
+app.use("/api/exemple", exempleRouter);
 // Establisments
 app.use("/api/establishment", establishmentRouter);
 // Users

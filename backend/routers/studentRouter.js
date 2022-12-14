@@ -15,6 +15,7 @@ const studentRouter = express.Router();
 
 // path for static verified page
 import path from "path";
+import Abonnement from "../models/AbonnementModel";
 const __dirname = path.resolve();
 
 // Cree un eleve
@@ -53,13 +54,33 @@ studentRouter.post(
         } else {
           // verifie est-ce que la responcecode est bon avant d'ajouter l'eleve
           if (responcecode == "0") {
-            const student = context.studentDatas;
-            const teacher = new Student(student);
-            const createdTeacher = await teacher.save();
+            // logique date d'expiration
+            let newDate = new Date();
+
+            const abonnement = await Abonnement.findById(studentDatas.type);
+
+            if (abonnement.name == "Mensuel") {
+              newDate.setMonth(newDate.getMonth() + 1);
+            } else if (abonnement.name == "Trimestriel") {
+              newDate.setMonth(newDate.getMonth() + 3);
+            } else {
+              newDate.setMonth(newDate.getMonth() + 10);
+            }
+
+            studentDatas.dateExp =
+              `${newDate.getMonth() + 1}` +
+              "/" +
+              newDate.getDate() +
+              "/" +
+              newDate.getFullYear();
+
+            const studentDatas = context.studentDatas;
+            const student = new Student(studentDatas);
+            const createdStudent = await student.save();
 
             res.status(201).send({
               message: "New Student Created",
-              student: createdTeacher,
+              student: createdStudent,
             });
 
             const teachers = await Teacher.find({
@@ -120,9 +141,29 @@ studentRouter.get(
   isVerified,
   isParent,
   expressAsyncHandler(async (req, res) => {
+    let now = new Date();
+    let date =
+      `${now.getMonth() + 1}` + "/" + now.getDate() + "/" + now.getFullYear();
+    let studentsParent = [];
+
     const students = await Student.find({ parent: req.user._id });
 
-    res.send(students);
+    for (let index = 0; index < students.length; index++) {
+      const student = students[index];
+
+      let newDate = new Date(student.dateExp);
+      let newAr = {};
+
+      if (new Date(date) < newDate) {
+        newAr = { student, isShow: true };
+      } else {
+        newAr = { student, isShow: false };
+      }
+
+      studentsParent.push(newAr);
+    }
+
+    res.send(studentsParent);
   })
 );
 

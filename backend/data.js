@@ -65,5 +65,19 @@ const data = {
       name: "Trimestre 3",
     },
   ],
+  abonnement: [
+    {
+      name: "Mensuel",
+      price: "1699F",
+    },
+    {
+      name: "Trimestriel",
+      price: "5097F",
+    },
+    {
+      name: "Annuel",
+      price: "16990F",
+    },
+  ],
 };
 export default data;
