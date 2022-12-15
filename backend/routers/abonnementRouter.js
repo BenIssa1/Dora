@@ -16,4 +16,13 @@ abonnementRouter.get(
   })
 );
 
+abonnementRouter.get(
+  "/",
+  expressAsyncHandler(async (req, res) => {
+    const abonnements = await Abonnement.find({});
+
+    res.send(abonnements);
+  })
+);
+
 export default abonnementRouter;

@@ -19,11 +19,11 @@ import Abonnement from "../models/AbonnementModel";
 const __dirname = path.resolve();
 
 // Cree un eleve
-studentRouter.post(
+studentRouter.get(
   "/",
-  // isAuth,
-  // isVerified,
-  // isParent,
+  isAuth,
+  isVerified,
+  isParent,
   expressAsyncHandler(async (req, res) => {
     const { returnContext, responcecode, referenceNumber } = req.query;
     const context = JSON.parse(returnContext);
@@ -57,7 +57,9 @@ studentRouter.post(
             // logique date d'expiration
             let newDate = new Date();
 
-            const abonnement = await Abonnement.findById(studentDatas.type);
+            const abonnement = await Abonnement.findById(
+              context.studentDatas.type
+            );
 
             if (abonnement.name == "Mensuel") {
               newDate.setMonth(newDate.getMonth() + 1);
@@ -85,6 +87,113 @@ studentRouter.post(
 
             const teachers = await Teacher.find({
               establishment: context.studentDatas.establishment,
+            });
+
+            // Paiement des enseignants
+
+            const teacherDatas = [];
+
+            for (
+              let indexTeacher = 0;
+              indexTeacher < teachers.length;
+              indexTeacher++
+            ) {
+              const teacher = teachers[indexTeacher];
+
+              for (
+                let indexClassroom = 0;
+                indexClassroom < teacher.classRoom.length;
+                indexClassroom++
+              ) {
+                const classroom = teacher.classRoom[indexClassroom];
+
+                if (req.body.classRoom == classroom) {
+                  teacher.solde += 175;
+                  await teacher.save();
+
+                  teacherDatas.push(teacher);
+                }
+              }
+            }
+
+            res.redirect(`/api/students/verified`);
+          } else {
+            let message = `Une erreur lors de la validation du paiement de votre enfant. Ref : ${referenceNumber}`;
+            res.redirect(
+              `/api/students/verified?error=true&message=${message}`
+            );
+          }
+        }
+      }
+    } else {
+      let message = `Cet utlisatuer n'existe pas`;
+      res.redirect(`/api/students/verified?error=true&message=${message}`);
+    }
+  })
+);
+
+// renouvellement de l'eleve
+studentRouter.get(
+  "/renewal",
+  isAuth,
+  isVerified,
+  isParent,
+  expressAsyncHandler(async (req, res) => {
+    const { returnContext, responcecode, referenceNumber } = req.query;
+    const context = JSON.parse(returnContext);
+
+    const user = await User.findOne({ _id: context.userId });
+
+    // verifie est-ce que le parent a un compte utilisateur
+    if (user) {
+      // verifie est-ce que l'eleve n'existe pas deja
+      const student = await Student.findById(context.studentDatas.studentId);
+
+      // si l'eleve existe pas. je fais une redirection vers une page
+      if (!student) {
+        let message = `Eleve n'existe pas`;
+        res.redirect(`/api/students/verified?error=true&message=${message}`);
+      } else {
+        // verifie est-ce que la reference number existe pour mieux me rassurer que le renouvellement n'a pas deja ete effectue
+        const studentReference = await Student.findOne({
+          referenceNumber: referenceNumber,
+        });
+
+        // si l'eleve existe. je fais une redirection vers une page
+        if (studentReference) {
+          let message = `Renouvellement de l'eleve est deja fait`;
+          res.redirect(`/api/students/verified?error=true&message=${message}`);
+        } else {
+          // verifie est-ce que la responcecode est bon avant d'ajouter l'eleve
+          if (responcecode == "0") {
+            // logique date d'expiration
+            let newDate = new Date();
+
+            const abonnement = await Abonnement.findById(
+              context.studentDatas.type
+            );
+
+            if (abonnement.name == "Mensuel") {
+              newDate.setMonth(newDate.getMonth() + 1);
+            } else if (abonnement.name == "Trimestriel") {
+              newDate.setMonth(newDate.getMonth() + 3);
+            } else {
+              newDate.setMonth(newDate.getMonth() + 10);
+            }
+
+            student.dateExp =
+              `${newDate.getMonth() + 1}` +
+              "/" +
+              newDate.getDate() +
+              "/" +
+              newDate.getFullYear();
+
+            student.referenceNumber = referenceNumber;
+
+            const studentupdated = await student.save();
+
+            const teachers = await Teacher.find({
+              establishment: studentupdated.establishment,
             });
 
             // Paiement des enseignants
